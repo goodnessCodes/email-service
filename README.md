@@ -1,98 +1,246 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Email Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A distributed email microservice built with NestJS that processes email notifications asynchronously through RabbitMQ. This service is part of a larger microservices-based notification system.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
+This service follows event-driven architecture principles:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Message Queue**: RabbitMQ for asynchronous communication
+- **Database**: PostgreSQL for email logging and audit trails
+- **Cache**: Redis (Upstash) for performance optimization and duplicate prevention
+- **Email Delivery**: SendGrid SMTP for reliable email sending
+- **Containerization**: Docker for consistent deployment
 
-## Project setup
+## Features
 
-```bash
-$ npm install
-```
+- Asynchronous email processing via RabbitMQ
+- Template-based email rendering with variable substitution
+- Circuit breaker pattern for fault tolerance
+- Idempotent message processing to prevent duplicates
+- Exponential backoff retry logic for failed emails
+- Comprehensive health monitoring and metrics
+- Redis caching for user preferences and templates
+- Database logging for audit trails and debugging
 
-## Compile and run the project
+## Prerequisites
 
-```bash
-# development
-$ npm run start
+- Node.js 18+
+- PostgreSQL database
+- Redis instance (Upstash recommended)
+- RabbitMQ instance
+- SendGrid account for email delivery
 
-# watch mode
-$ npm run start:dev
+## Installation
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+1. Clone the repository:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+git clone  https://github.com/goodylove/email-service.git
+cd email-service
 ```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Set up environment variables (see Configuration section)
+
+4. Start the service:
+
+```bash
+# Development
+npm run start:dev
+
+# Production
+npm run build
+npm run start:prod
+```
+
+## Configuration
+
+Create a `.env` file with the following variables:
+
+### Required Environment Variables
+
+```
+# Server
+PORT=3000
+NODE_ENV=development
+
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=password
+DB_DATABASE=email_service
+
+# Redis
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+
+# RabbitMQ
+RABBITMQ_URL=your_rabbitmq_url
+RABBITMQ_EMAIL_QUEUE=email.queue
+
+# Email Service (SendGrid)
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASS=your_sendgrid_api_key
+EMAIL_FROM=your_verified_email@domain.com
+```
+
+### Optional Environment Variables
+
+```
+# External Services (for full integration)
+TEMPLATE_SERVICE_URL=http://template-service:3000
+USER_SERVICE_URL=http://user-service:3001
+API_GATEWAY_URL=http://api-gateway:3000
+
+# Feature Flags
+DISABLE_SMTP=false  # Set to true for testing without actual email sending
+```
+
+## API Endpoints
+
+### Health Check
+
+```
+GET /health
+```
+
+Returns service health status including database, Redis, and SMTP connectivity.
+
+
+
+## Message Format
+
+The service consumes messages from RabbitMQ with the following structure:
+
+```json
+{
+  "request_id": "unique-request-identifier",
+  "user_id": "user-identifier",
+  "template_code": "email_template_name",
+  "variables": {
+    "name": "Recipient Name",
+    "company": "Company Name"
+  },
+  "priority": "high|normal|low"
+}
+```
+
+## Message Processing Flow
+
+1. **Message Consumption**: RabbitMQ consumer listens to `email.queue`
+2. **Duplicate Check**: Redis verifies if request was already processed
+3. **Circuit Breaker**: Prevents system overload during failures
+4. **Template Rendering**: Retrieves and personalizes email template
+5. **Email Delivery**: Sends email via configured SMTP provider
+6. **Status Update**: Logs result and updates notification status
+7. **Error Handling**: Implements retry logic with exponential backoff
+
+## Database Schema
+
+The service uses a single table for audit logging:
+
+### email_logs
+
+- `id`: Primary key (UUID)
+- `request_id`: Unique identifier for the email request
+- `user_id`: Recipient user identifier
+- `recipient`: Email address
+- `subject`: Email subject line
+- `message_id`: SMTP message identifier
+- `status`: Delivery status (pending, delivered, failed)
+- `attempts`: Number of delivery attempts
+- `error_message`: Failure description if applicable
+- `sent_at`: Timestamp of successful delivery
+- `created_at`: Record creation timestamp
+- `updated_at`: Record last update timestamp
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Docker
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+
+
+ Run with environment variables:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker run -p 3000:3000 --env-file .env email-service
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Docker Compose
 
-## Resources
+A `docker-compose.yml` file is provided for local development with PostgreSQL.
 
-Check out a few resources that may come in handy when working with NestJS:
+### Cloud Deployment
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+This service can be deployed to:
+
+- Railway
+- Render
+- Fly.io
+- AWS ECS
+- Google Cloud Run
+- DigitalOcean App Platform
+
+## Monitoring
+
+The service provides several monitoring features:
+
+- Health checks at `/health`
+- Structured logging with correlation IDs
+- Circuit breaker status monitoring
+- Performance metrics for email processing
+- Error rate tracking and alerting
+
+## Error Handling
+
+- **Circuit Breaker**: Automatically opens after consecutive failures
+- **Exponential Backoff**: Retries failed emails with increasing delays
+- **Dead Letter Queue**: Moves permanently failed messages to DLQ
+- **Graceful Degradation**: Continues operation during external service failures
+
+## Development
+
+
+
+
+
+
+## Dependencies
+
+### Core Dependencies
+
+- @nestjs/common: NestJS framework
+- @nestjs/microservices: RabbitMQ integration
+- @nestjs/typeorm: Database ORM
+- typeorm: Database abstraction
+- nodemailer: Email sending
+- @upstash/redis: Redis client
+
+### Development Dependencies
+
+- @nestjs/cli: NestJS command line tools
 
 ## Support
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+For issues and questions:
 
-## Stay in touch
+1. Check the health endpoint for service status
+2. Review application logs for error details
+3. Verify environment variable configuration
+4. Check RabbitMQ queue status and message flow
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Performance
 
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- Designed to handle 1000+ emails per minute
+- Horizontal scaling supported through stateless design
+- Connection pooling for database and SMTP
+- Redis caching for optimal performance
