@@ -1,48 +1,15 @@
 version: '3.8'
-
 services:
   postgres:
-    image: postgres:16
-    container_name: postgres
-    restart: always
+    image: postgres:13
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
       POSTGRES_DB: email_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  redis:
-    image: redis:latest
-    container_name: redis
-    restart: always
-    ports:
-      - '6379:6379'
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    restart: always
-    ports:
-      - '5672:5672' 
-      - '15672:15672' # management UI
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-
-  email-service:
-    build: ./email-service
-    container_name: email-service
-    restart: always
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./email-service/.env
-    depends_on:
-      - postgres
-      - redis
-      - rabbitmq
 
 volumes:
-  postgres_data:    
+  postgres_data:
