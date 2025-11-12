@@ -23,18 +23,40 @@ import { TerminusModule } from '@nestjs/terminus';
       maxRedirects: 5,
     }),
     TerminusModule,
+    
+
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USER'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_DATABASE'),
-        entities: [EmailLog],
-        synchronize: process.env.NODE_ENV === 'development',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>('DATABASE_URL' as string);
+
+        if (databaseUrl) {
+          return {
+            type: 'postgres',
+            url: databaseUrl, 
+            entities: [EmailLog],
+            synchronize: configService.get('NODE_ENV') === 'development',
+            ssl: true, 
+            extra: {
+              ssl: {
+                rejectUnauthorized: false
+              }
+            }
+          };
+        }
+
+        // Fallback to individual settings (for local development)
+        return {
+          type: 'postgres',
+          host: configService.get('DB_HOST'),
+          port: configService.get('DB_PORT'),
+          username: configService.get('DB_USER'),
+          password: configService.get('DB_PASSWORD'),
+          database: configService.get('DB_DATABASE'),
+          entities: [EmailLog],
+          synchronize: configService.get('NODE_ENV') === 'development',
+        };
+      },
     }),
     TypeOrmModule.forFeature([EmailLog]),
     ClientsModule.registerAsync([
