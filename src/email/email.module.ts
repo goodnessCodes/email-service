@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailService } from './email.service';
 import { EmailLog } from 'src/entity/email-notification.entity';
 import { RabbitMQModule } from 'src/rabbitMq/rabbitMq.module';
-import { HealthController } from 'src/health/health.controller';
+import { AppController, HealthController } from 'src/health/health.controller';
 
 @Module({
     imports: [
@@ -11,7 +11,7 @@ import { HealthController } from 'src/health/health.controller';
         RabbitMQModule,
     ],
     providers: [EmailService],
-    controllers: [HealthController],
+    controllers: [HealthController,AppController],
     exports: [EmailService],
 })
 export class EmailModule { }

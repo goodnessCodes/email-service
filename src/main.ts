@@ -23,7 +23,7 @@ async function bootstrap() {
     transport: Transport.RMQ,
     options: {
       urls: [process.env.RABBITMQ_URL as string],
-      queue: 'email_queue',
+      queue: 'email.queue',
       exchange: 'notifications.direct',
       exchangeType: 'direct',
       noAck: false,
