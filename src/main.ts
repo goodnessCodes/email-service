@@ -36,7 +36,7 @@ async function bootstrap() {
   await app.startAllMicroservices();
 
   const port = configService.get('PORT', 8080);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`Email Service is running on port ${port}`);
   logger.log(`Health check available at: http://localhost:${port}/health`);
