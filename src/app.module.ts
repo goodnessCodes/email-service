@@ -28,14 +28,14 @@ import { TerminusModule } from '@nestjs/terminus';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const databaseUrl = configService.get<string>('DATABASE_URL' as string);
+        const databaseUrl = configService.get<string>('NEON_DATABASE_URL' as string);
 
         if (databaseUrl) {
           return {
             type: 'postgres',
             url: databaseUrl, 
             entities: [EmailLog],
-            synchronize: configService.get('NODE_ENV') === 'development',
+           
             ssl: true, 
             extra: {
               ssl: {
